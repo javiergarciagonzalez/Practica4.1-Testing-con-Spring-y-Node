@@ -2,7 +2,7 @@
 
 ```
 curl -d '{ "title": "Watchmen", "year" : 2009, "director": "Zack Snyder"}'\
-    -H "Content-Type: application/json" -X POST http://localhost:3000/api/anuncios/
+    -H "Content-Type: application/json" -X POST http://localhost:3000/api/films/
 ```
 
 # Run DynamoDB locally
