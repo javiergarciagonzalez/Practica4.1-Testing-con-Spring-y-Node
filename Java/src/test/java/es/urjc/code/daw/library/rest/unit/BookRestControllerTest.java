@@ -1,4 +1,4 @@
-package es.urjc.code.daw.library.rest;
+package es.urjc.code.daw.library.rest.unit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import es.urjc.code.daw.library.book.Book;
@@ -77,10 +77,10 @@ public class BookRestControllerTest {
 
 
     @Test
-    @WithMockUser(username = "admin", password = "pass", roles = {"USER", "ADMIN"})
+    @WithMockUser(username = "admin", password = "pass", roles = "ADMIN")
     public void deleteBookTest() throws Exception {
 
-        mvc.perform(delete("/api/books/1")
+        mvc.perform(delete("/api/books/{id}", 1)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
