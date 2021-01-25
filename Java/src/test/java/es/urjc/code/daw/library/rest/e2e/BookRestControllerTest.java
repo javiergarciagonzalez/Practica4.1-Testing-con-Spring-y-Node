@@ -1,13 +1,12 @@
 package es.urjc.code.daw.library.rest.e2e;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import es.urjc.code.daw.library.book.Book;
-import es.urjc.code.daw.library.book.BookService;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
@@ -27,33 +26,48 @@ public class BookRestControllerTest {
     int port;
 
     Integer createdId;
+    Integer toDeleteId;
 
-    @Autowired
-    private BookService bookService;
     private Book book;
 
     @AfterEach
     void afterEach(TestInfo info) {
         if (info.getTags().contains("deleteFromDB")) {
-            bookService.delete(createdId);
+            given()
+                .auth()
+                .basic("admin", "pass")
+            .when()
+                .delete("/api/books/{id}", this.toDeleteId)
+            .then()
+                .statusCode(200);
         }
     }
 
     @BeforeEach
-    public void setUp(TestInfo info) {
+    public void setUp(TestInfo info) throws JsonProcessingException {
         RestAssured.port = port;
         RestAssured.useRelaxedHTTPSValidation();
         RestAssured.baseURI = "https://localhost:" + port;
         book = new Book("How to outfox a billionaire", "https://blog.reedsy.com/book-title-generator/");
         if (info.getTags().contains("createBook")) {
-            createdId = bookService.save(book).getId().intValue();
+            Response response =
+                    given()
+                        .auth()
+                        .basic("user", "pass")
+                        .contentType(ContentType.JSON)
+                        .body(new ObjectMapper().writeValueAsString(book))
+                    .when()
+                        .post("/api/books/")
+                        .andReturn();
+
+            this.createdId = from(response.getBody().asString()).get("id");
         }
 
     }
 
 
     @Test
-    public void getBooksTest() throws Exception {
+    public void getBooksTest() {
         Book book1 = new Book("SUEÑOS DE ACERO Y NEON", "Los personajes que protagonizan este relato sobreviven en una sociedad en decadencia a la que, no obstante, lograrán devolver la posibilidad de un futuro. Año 2484. En un mundo dominado por las grandes corporaciones, solo un hombre, Jordi Thompson, detective privado deslenguado y vividor, pero de gran talento y sentido d...");
         Book book2 = new Book("LA VIDA SECRETA DE LA MENTE", "La vida secreta de la mentees un viaje especular que recorre el cerebro y el pensamiento: se trata de descubrir nuestra mente para entendernos hasta en los más pequeños rincones que componen lo que somos, cómo forjamos las ideas en los primeros días de vida, cómo damos forma a las decisiones que nos constituyen, cómo soñamos y cómo imaginamos, por qué sentimos ciertas emociones hacia los demás, cómo los demás influyen en nosotros, y cómo el cerebro se transforma y, con él, lo que somos.");
         Book book3 = new Book("CASI SIN QUERER", "El amor algunas veces es tan complicado como impredecible. Pero al final lo que más valoramos son los detalles más simples, los más bonitos, los que llegan sin avisar. Y a la hora de escribir sobre sentimientos, no hay nada más limpio que hacerlo desde el corazón. Y eso hace Defreds en este libro.");
@@ -71,7 +85,7 @@ public class BookRestControllerTest {
 
     @Test
     @Tag("deleteFromDB")
-    public void addBookTest() throws Exception {
+    public void addBookTest() throws JsonProcessingException {
 
         Response response =
                 given()
@@ -83,12 +97,12 @@ public class BookRestControllerTest {
                         .post("/api/books/")
                         .andReturn();
 
-        this.createdId = from(response.getBody().asString()).get("id");
+        this.toDeleteId = from(response.getBody().asString()).get("id");
 
         response
                 .then()
                 .statusCode(201)
-                .body("id",  equalTo(this.createdId))
+                .body("id",  equalTo(this.toDeleteId))
                 .body("title", equalTo(book.getTitle()))
                 .body("description", equalTo(book.getDescription()));
     }
@@ -96,7 +110,7 @@ public class BookRestControllerTest {
 
     @Test
     @Tag("createBook")
-    public void deleteBookTest() throws Exception {
+    public void deleteBookTest() {
         given()
                 .auth()
                 .basic("admin", "pass")
